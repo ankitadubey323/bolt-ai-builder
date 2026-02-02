@@ -717,6 +717,7 @@ import cors from "cors";
 import OpenAI from "openai";
 import connection from "./config/db.js";
 import boltSystemPrompt from "./src/prompts/boltsystem.js";
+import rateLimit from "express-rate-limit";
 // import { extractJSON } from "./src/utils/extractJson.js";
 
 dotenv.config();
@@ -735,6 +736,18 @@ app.use(
 
 // ---------------- DB ----------------
 connection();
+
+
+const boltLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 5, // 5 requests per IP per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: "Too many requests. Please wait and try again.",
+  },
+});
 
 // ---------------- OPENAI (GROQ) ----------------
 const client = new OpenAI({
@@ -799,7 +812,7 @@ const client = new OpenAI({
 
 import { extractJSON } from "./src/utils/extractJson.js";
 
-app.post("/api/bolt", async (req, res) => {
+app.post("/api/bolt", boltLimiter, async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) {
